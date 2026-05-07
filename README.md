@@ -114,6 +114,8 @@ DEEPSEEK_API_KEY=your_api_key_here
 DEEPSEEK_MODEL=deepseek-chat
 DEEPSEEK_TEMPERATURE=0.7
 XHS_WORKFLOW_MOCK=1
+XHS_LLM_MAX_RETRIES=3
+XHS_LLM_RETRY_BACKOFF_BASE=1
 
 # Optional cover prompt branding
 XHS_BRAND_NAME=内容方法实验室
@@ -267,6 +269,13 @@ XHS_WORKFLOW_MOCK=1
 ```env
 XHS_WORKFLOW_MOCK=0
 DEEPSEEK_API_KEY=your_real_api_key
+```
+
+真实模型调用会在 `invoke_llm()` 中做有限次数重试、指数退避等待和空内容检测。可通过环境变量调整：
+
+```env
+XHS_LLM_MAX_RETRIES=3
+XHS_LLM_RETRY_BACKOFF_BASE=1
 ```
 
 ## 封面品牌配置

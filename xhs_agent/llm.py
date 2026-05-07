@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import os
+import time
 from typing import cast
 
 from dotenv import load_dotenv
@@ -11,6 +12,32 @@ from pydantic import SecretStr
 load_dotenv()
 
 _llm: ChatDeepSeek | None = None
+
+
+def _get_int_env(name: str, default: int) -> int:
+    raw_value = os.getenv(name)
+    if raw_value is None:
+        return default
+    try:
+        value = int(raw_value)
+    except ValueError as exc:
+        raise ValueError(f"{name} must be an integer.") from exc
+    if value < 1:
+        raise ValueError(f"{name} must be greater than or equal to 1.")
+    return value
+
+
+def _get_float_env(name: str, default: float) -> float:
+    raw_value = os.getenv(name)
+    if raw_value is None:
+        return default
+    try:
+        value = float(raw_value)
+    except ValueError as exc:
+        raise ValueError(f"{name} must be a number.") from exc
+    if value < 0:
+        raise ValueError(f"{name} must be greater than or equal to 0.")
+    return value
 
 
 def build_llm() -> ChatDeepSeek:
@@ -37,10 +64,25 @@ def invoke_llm(system_prompt: str, user_prompt: str) -> str:
     if _llm is None:
         _llm = build_llm()
 
-    response = cast(ChatDeepSeek, _llm).invoke(
-        [
-            SystemMessage(content=system_prompt),
-            HumanMessage(content=user_prompt),
-        ]
-    )
-    return str(response.content).strip()
+    max_retries = _get_int_env("XHS_LLM_MAX_RETRIES", 3)
+    backoff_base = _get_float_env("XHS_LLM_RETRY_BACKOFF_BASE", 1.0)
+    last_error: Exception | None = None
+
+    for attempt in range(1, max_retries + 1):
+        try:
+            response = cast(ChatDeepSeek, _llm).invoke(
+                [
+                    SystemMessage(content=system_prompt),
+                    HumanMessage(content=user_prompt),
+                ]
+            )
+            content = str(response.content).strip()
+            if not content:
+                raise ValueError("LLM returned empty content.")
+            return content
+        except Exception as exc:
+            last_error = exc
+            if attempt < max_retries:
+                time.sleep(backoff_base * (2 ** (attempt - 1)))
+
+    raise RuntimeError(f"LLM invocation failed after {max_retries} attempts: {last_error}")
