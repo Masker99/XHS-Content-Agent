@@ -3,6 +3,7 @@ from __future__ import annotations
 import argparse
 import json
 import sys
+from collections.abc import Mapping
 from pathlib import Path
 from typing import Any
 
@@ -13,7 +14,7 @@ if str(PROJECT_ROOT) not in sys.path:
 from xhs_agent import run_xhs_workflow  # noqa: E402
 
 
-def _format_result(result: dict[str, Any]) -> dict[str, Any]:
+def _format_result(result: Mapping[str, Any]) -> dict[str, Any]:
     return {
         "source": result.get("source"),
         "framework": result.get("framework"),

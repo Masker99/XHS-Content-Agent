@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from collections.abc import Mapping
 from typing import Any
 
 from fastapi import FastAPI, HTTPException
@@ -29,7 +30,7 @@ def health() -> dict[str, str]:
     return {"status": "ok"}
 
 
-def _format_workflow_result(result: dict[str, Any]) -> dict[str, Any]:
+def _format_workflow_result(result: Mapping[str, Any]) -> dict[str, Any]:
     return {
         "source": result.get("source"),
         "framework": result.get("framework"),
