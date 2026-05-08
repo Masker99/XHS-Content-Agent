@@ -46,6 +46,9 @@
 ├── api_server.py          # FastAPI HTTP 服务入口
 ├── cli.py                 # 命令行演示入口，支持流式输出
 ├── xhs_workflow.py        # SDK 风格聚合入口，方便外部 Python 代码 import
+├── scripts/
+│   └── batch_run.py       # 批量任务运行脚本
+├── examples/              # 单条与批量请求样例
 ├── requirements.txt       # Python 依赖
 ├── .env.example           # 环境变量示例
 └── xhs_agent/
@@ -139,13 +142,13 @@ XHS_WORKFLOW_MOCK=1
 普通运行：
 
 ```powershell
-python cli.py "帮我写一篇关于 RPA 开发工程师转型 AI 应用工程师的小红书笔记"
+python cli.py "帮我写一篇小红书笔记，主题是普通上班族如何建立周末复盘习惯"
 ```
 
 流式查看每个节点输出：
 
 ```powershell
-python cli.py "帮我写一篇关于 RPA 开发工程师转型 AI 应用工程师的小红书笔记" --stream
+python cli.py "帮我写一篇小红书笔记，主题是普通上班族如何建立周末复盘习惯" --stream
 ```
 
 不传参数时进入交互模式：
@@ -181,7 +184,7 @@ POST /invoke
 Content-Type: application/json
 
 {
-  "instruction": "帮我写一篇关于 RPA 开发工程师转型 AI 应用工程师的小红书笔记"
+  "instruction": "帮我写一篇小红书笔记，主题是普通上班族如何建立周末复盘习惯"
 }
 ```
 
@@ -191,9 +194,9 @@ Content-Type: application/json
 {
   "openclaw": {
     "task": "generate_xhs_note",
-    "topic": "RPA 开发工程师转型 AI 应用工程师",
-    "audience": "想转型 AI 应用岗位的自动化工程师",
-    "style": "真实经验分享"
+    "topic": "普通上班族如何建立周末复盘习惯",
+    "audience": "工作日很忙、周末容易摆烂，但希望生活和工作慢慢变有序的年轻上班族",
+    "style": "真实、克制、有生活感"
   }
 }
 ```
@@ -211,6 +214,65 @@ Content-Type: application/json
   "cover_prompt": "..."
 }
 ```
+
+批量调用内容工作流：
+
+```http
+POST /batch-invoke
+Content-Type: application/json
+
+{
+  "instructions": [
+    "帮我写一篇小红书笔记，主题是普通上班族如何建立周末复盘习惯",
+    "帮我写一篇小红书笔记，主题是租房党如何低成本布置一个舒服的书桌角",
+    "帮我写一篇小红书笔记，主题是新手如何开始做一周早餐备餐"
+  ]
+}
+```
+
+批量接口会逐条执行工作流，并为每条输入记录 `success` 或 `failed`，单条失败不会中断整个批次。
+
+## 批量运行
+
+项目提供批量任务脚本，适合本地批量测试、评测样本运行和自动化内容生成。
+
+默认读取：
+
+```text
+examples/batch_requests.json
+```
+
+默认输出：
+
+```text
+outputs/batch_results.json
+```
+
+运行：
+
+```powershell
+$env:XHS_WORKFLOW_MOCK="1"
+python scripts/batch_run.py
+```
+
+也可以指定输入和输出路径：
+
+```powershell
+python scripts/batch_run.py --input examples/batch_requests.json --output outputs/batch_results.json
+```
+
+批量输入格式：
+
+```json
+[
+  {
+    "id": "note_001",
+    "instruction": "帮我写一篇小红书笔记，主题是普通上班族如何建立周末复盘习惯。"
+  }
+]
+```
+
+输出结果会保存每条任务的 `id`、`instruction`、`status`、`result` 或 `error`，方便后续追踪和评测。
 
 ## Python 调用
 
@@ -240,6 +302,7 @@ for event in stream_xhs_workflow("帮我写一篇小红书笔记"):
 examples/
 ├── sample_request.json       # 普通 instruction 请求
 ├── openclaw_request.json     # OpenClaw 风格结构化请求
+├── batch_requests.json       # 批量任务请求
 └── sample_output_mock.md     # mock 模式输出结构示例
 ```
 
@@ -299,6 +362,7 @@ XHS_BRAND_BOOK_3=工作流笔记
 |---|---|
 | `instruction` | 普通文本指令，适合本地调试和普通用户调用 |
 | `openclaw` | 结构化 JSON，适合接入上层 Agent、自动化平台或 OpenClaw 指挥官 |
+| `instructions` | 批量文本指令数组，适合前端或自动化系统一次提交多条任务 |
 
 如果两个字段都不传，接口会返回 `400`：
 
@@ -315,7 +379,8 @@ XHS_BRAND_BOOK_3=工作流笔记
 3. **输入适配**：同时支持普通文本和 OpenClaw 风格 JSON，为后续多 Agent 编排预留接口。
 4. **Prompt 工程化管理**：将不同节点的 Prompt 统一放在 `prompts.py`，方便迭代和版本管理。
 5. **Mock 调试模式**：不依赖真实 API Key 也能验证流程，适合演示、调试和测试。
-6. **流式输出**：CLI 支持按节点查看中间结果，方便观察工作流执行过程。
+6. **批量处理能力**：支持 JSON 文件批量运行和 `/batch-invoke` 批量 API，单条失败不会中断整个批次。
+7. **流式输出**：CLI 支持按节点查看中间结果，方便观察工作流执行过程。
 
 ## 后续计划
 

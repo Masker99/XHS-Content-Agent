@@ -24,6 +24,7 @@ ENV/
 logs/
 *.log
 output/
+outputs/
 tmp/
 temp/
 
@@ -32,4 +33,3 @@ temp/
 .idea/
 .DS_Store
 Thumbs.db
-
