@@ -119,6 +119,7 @@ DEEPSEEK_TEMPERATURE=0.7
 XHS_WORKFLOW_MOCK=1
 XHS_LLM_MAX_RETRIES=3
 XHS_LLM_RETRY_BACKOFF_BASE=1
+XHS_DB_PATH=data/xhs_agent.db
 
 # Optional cover prompt branding
 XHS_BRAND_NAME=内容方法实验室
@@ -205,6 +206,7 @@ Content-Type: application/json
 
 ```json
 {
+  "run_id": "...",
   "source": "text",
   "framework": "...",
   "titles": "...",
@@ -231,6 +233,48 @@ Content-Type: application/json
 ```
 
 批量接口会逐条执行工作流，并为每条输入记录 `success` 或 `failed`，单条失败不会中断整个批次。
+
+查询最近运行记录：
+
+```http
+GET /runs?limit=20
+```
+
+查询单条运行详情：
+
+```http
+GET /runs/{run_id}
+```
+
+`/invoke` 和 `/batch-invoke` 都会自动保存运行记录，响应里的 `run_id` 可用于查询详情。
+
+## 数据库存储
+
+项目使用 SQLite 保存工作流运行记录，默认路径：
+
+```text
+data/xhs_agent.db
+```
+
+可通过环境变量调整：
+
+```env
+XHS_DB_PATH=data/xhs_agent.db
+```
+
+保存内容包括：
+
+- 输入来源：`text` / `openclaw`
+- 原始输入
+- 执行状态：`success` / `failed`
+- 工作流输出：框架、标题、关键词、正文、封面提示词
+- 错误信息
+- 模型名
+- 是否 mock 模式
+- 创建时间、完成时间、耗时
+- 批量任务元信息
+
+数据库文件属于运行时产物，已通过 `.gitignore` 忽略；仓库只保留 `data/.gitkeep` 用来保留目录结构。
 
 ## 批量运行
 
@@ -380,7 +424,8 @@ XHS_BRAND_BOOK_3=工作流笔记
 4. **Prompt 工程化管理**：将不同节点的 Prompt 统一放在 `prompts.py`，方便迭代和版本管理。
 5. **Mock 调试模式**：不依赖真实 API Key 也能验证流程，适合演示、调试和测试。
 6. **批量处理能力**：支持 JSON 文件批量运行和 `/batch-invoke` 批量 API，单条失败不会中断整个批次。
-7. **流式输出**：CLI 支持按节点查看中间结果，方便观察工作流执行过程。
+7. **运行记录存储**：使用 SQLite 保存成功和失败任务，支持 `/runs` 和 `/runs/{run_id}` 查询历史记录。
+8. **流式输出**：CLI 支持按节点查看中间结果，方便观察工作流执行过程。
 
 ## 后续计划
 

@@ -25,6 +25,8 @@ logs/
 *.log
 output/
 outputs/
+data/*.db
+data/*.db-*
 tmp/
 temp/
 
